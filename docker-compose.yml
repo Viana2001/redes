@@ -1,0 +1,25 @@
+version: "3.3"
+services:
+
+  db:
+    image: mysql:8.0.36
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: rede
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 1234
+    ports:
+      - "9999:3306"
+    volumes:
+      - ./db-files:/var/lib/mysql
+
+  web:
+    working_dir: /home/app
+    image: node:20-bullseye
+    restart: always
+    ports:
+      - "80:3000"
+    volumes:
+      - .:/home/app
+    command: "npm start"
