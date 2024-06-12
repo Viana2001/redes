@@ -1,64 +1,54 @@
-// Simulando um banco de dados simples de usuários na memória
-let users = JSON.parse(localStorage.getItem('users')) || [];
+const express = require('express');
+const bodyParser = require('body-parser');
+const mysql = require('mysql');
 
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const userWelcome = document.getElementById('userWelcome');
-    const logoutButton = document.getElementById('logoutButton');
+const app = express();
+const port = 3000;
 
-    // Lida com o envio do formulário de login
-    if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const username = e.target.username.value;
-            const password = e.target.password.value;
+// Configurar o banco de dados MySQL
+const db = mysql.createConnection({
+    host: '34.45.3.173',
+    user: 'root',
+    password: '1234',
+    database: 'rede'
+});
 
-            const user = users.find(user => user.username === username && user.password === password);
-            if (user) {
-                sessionStorage.setItem('loggedInUser', JSON.stringify(user));
-                window.location.href = 'home.html';
-            } else {
-                alert('Nome de usuário ou senha inválidos');
-            }
-        });
+// Conectar ao banco de dados MySQL
+db.connect((err) => {
+    if (err) {
+        throw err;
     }
+    console.log('Conectado ao banco de dados MySQL');
+});
 
-    // Lida com o envio do formulário de cadastro
-    if (registerForm) {
-        registerForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const newUsername = e.target.newUsername.value;
-            const newPassword = e.target.newPassword.value;
+app.use(bodyParser.json());
 
-            const existingUser = users.find(user => user.username === newUsername);
-            if (existingUser) {
-                alert('Nome de usuário já existe');
-            } else {
-                const newUser = { username: newUsername, password: newPassword };
-                users.push(newUser);
-                localStorage.setItem('users', JSON.stringify(users));
-                alert('Cadastro realizado com sucesso! Por favor, faça login.');
-                window.location.href = 'index.html';
-            }
-        });
-    }
-
-    // Exibe a mensagem de boas-vindas na página inicial
-    if (userWelcome) {
-        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
-        if (loggedInUser) {
-            userWelcome.textContent = loggedInUser.username;
+// Rota para registrar um novo usuário
+app.post('/register', (req, res) => {
+    const { username, password } = req.body;
+    const sql = 'INSERT INTO users (username, password) VALUES (?, ?)';
+    db.query(sql, [username, password], (err, result) => {
+        if (err) {
+            res.status(400).send('Nome de usuário já existe');
         } else {
-            window.location.href = 'index.html';
+            res.status(200).send('Cadastro realizado com sucesso! Por favor, faça login.');
         }
-    }
+    });
+});
 
-    // Lida com o logout
-    if (logoutButton) {
-        logoutButton.addEventListener('click', () => {
-            sessionStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
-        });
-    }
+// Rota para autenticar o usuário
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    const sql = 'SELECT * FROM users WHERE username = ? AND password = ?';
+    db.query(sql, [username, password], (err, result) => {
+        if (err || result.length === 0) {
+            res.status(401).send('Nome de usuário ou senha inválidos');
+        } else {
+            res.status(200).json({ username: result[0].username });
+        }
+    });
+});
+
+app.listen(port, () => {
+    console.log(`Servidor rodando em http://localhost:${port}`);
 });
